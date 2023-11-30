@@ -1,30 +1,41 @@
-import boto3
-import os
 import json
-import time
+import boto3
+import logging
+from datetime import datetime, timedelta
 
-# Initialize a DynamoDB resource
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(os.environ['DYNAMODB_TABLE'])
+table = dynamodb.Table('Reminder_Table')
 
 
 def lambda_handler(event, context):
-    body = json.loads(event['body'])
-    user_id = body['userId']
-    ttl = int(time.time()) + body['delayInSeconds']
-    notification_type = body['notificationType']
-    message = body['message']
+    try:
+        data = json.loads(event['body'])
+        reminder_id = data['id']
+        user_id = data['userId']
+        ttl = int((datetime.now() + timedelta(days=1)).timestamp())
+        notification_type = data['notificationType']
+        message = data['message']
+        response = table.put_item(
+            Item={
+                'id': reminder_id,
+                'userId': user_id,
+                'TTL': ttl,
+                'notificationType': notification_type,
+                'message': message
+            }
+        )
 
-    table.put_item(
-        Item={
-            'userId': user_id,
-            'TTL': ttl,
-            'notificationType': notification_type,
-            'message': message
+        logger.info(f"Set reminder: {response}")
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Reminder set successfully!')
         }
-    )
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Reminder set successfully')
-    }
+    except Exception as e:
+        logger.error(f"Error setting reminder: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps('Error setting reminder')
+        }
