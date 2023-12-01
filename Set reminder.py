@@ -37,5 +37,5 @@ def lambda_handler(event, context):
         logger.error(f"Error setting reminder: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps('Error setting reminder')
+            'body': json.dumps({'error': str(e)})
         }
